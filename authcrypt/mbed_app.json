@@ -1,3 +1,0 @@
-{
-    "macros": ["MBEDTLS_USER_CONFIG_FILE=\"mbedtls_entropy_config.h\""]
-}

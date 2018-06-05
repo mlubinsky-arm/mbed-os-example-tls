@@ -1,6 +1,6 @@
-# Mbed TLS Examples on Mbed OS
+#  MQTT client with TLS  on Mbed OS
 
-This repository contains a collection of Mbed TLS example applications based on Mbed OS. Each subdirectory contains a separate example meant for building as an executable.
+This repository contains an  Mbed MQTT client with TLS example.
 
 # Getting started
 
@@ -21,9 +21,6 @@ If your board has no hardware entropy source or its entropy source is not integr
 * [Serial port monitor](https://os.mbed.com/handbook/SerialPC#host-interface-and-terminal-applications).
 
 An alternative to Mbed CLI is to use the [Mbed Online Compiler](https://os.mbed.com/compiler/). In this case, you need to import the example projects from [Mbed developer](https://os.mbed.com/) to your Mbed Online Compiler session using the links below:
-* [authcrypt](https://os.mbed.com/teams/mbed-os-examples/code/mbed-os-example-tls-authcrypt)
-* [benchmark](https://os.mbed.com/teams/mbed-os-examples/code/mbed-os-example-tls-benchmark)
-* [hashing](https://os.mbed.com/teams/mbed-os-examples/code/mbed-os-example-tls-hashing)
 * [tls-client](https://os.mbed.com/teams/mbed-os-examples/code/mbed-os-example-tls-tls-client)
 
 ## Building and running the examples
@@ -50,9 +47,6 @@ An alternative to Mbed CLI is to use the [Mbed Online Compiler](https://os.mbed.
 ## Monitoring the application
 
 Please browse the subdirectories for specific documentation.
-* [authcrypt](./authcrypt/README.md): performs authenticated encryption and authenticated decryption of a buffer.
-* [benchmark](./benchmark/README.md): benchmarks the various cryptographic primitives offered by Mbed TLS.
-* [hashing](./hashing/README.md): performs hashing of a buffer with SHA-256 using various APIs.
 * [tls-client](./tls-client/README.md): downloads a file from an HTTPS server (os.mbed.com) and looks for a specific string in that file.
 
 The application prints debug messages over the serial port, so you can monitor its activity with a serial terminal emulator. Start the [serial terminal emulator](https://os.mbed.com/handbook/Terminals) and connect to the [virtual serial port](https://os.mbed.com/handbook/SerialPC#host-interface-and-terminal-applications) presented by FRDM-K64F. Use the following settings:
