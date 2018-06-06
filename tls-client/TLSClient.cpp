@@ -47,7 +47,8 @@ const char *TLSClient::TLS_PEM_CA =
     "HMUfpIBvFSDJ3gyICh3WZlXi/EjJKSZp4A==\n"
     "-----END CERTIFICATE-----\n";
 
-
+const char *TLSClient::TLS_CLIENT_CERT = "abdc12 FakeCert";   //TODO which openssl command generates this file ?
+const char *TLSClient::TLS_CLIENT_PKEY = "xyz FakePkey";      //TODO which openssl command generates this file ?
 
 TLSClient::TLSClient(const char *in_server_name,
                                    const uint16_t in_server_port,
@@ -63,8 +64,8 @@ TLSClient::TLSClient(const char *in_server_name,
     mbedtls_entropy_init(&entropy);
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_x509_crt_init(&cacert);
-    mbedtls_x509_crt_init(&clicert);    ///  client cert
-    mbedtls_pk_init( &pkey );           //   private key 
+    mbedtls_x509_crt_init(&clicert);    //  TODO compilation error here  client cert
+    mbedtls_pk_init( &pkey );           //  TODO compilation error here private key 
     mbedtls_ssl_init(&ssl);
     mbedtls_ssl_config_init(&ssl_conf);
 }
@@ -212,6 +213,22 @@ int TLSClient::configureTlsContexts()
  
     // TODO: initialize clicert and pkey - currently it is an compilation error here
     
+    ret = mbedtls_x509_crt_parse(&clicert,
+                        reinterpret_cast<const unsigned char *>(TLS_CLIENT_CERT),
+                        strlen(TLS_CLIENT_CERT) + 1);
+    if (ret != 0) {
+        mbedtls_printf("mbedtls_x509_crt_parse() returned -0x%04X\n", -ret);
+        return ret;
+    }
+
+    ret = mbedtls_x509_crt_parse(&pkey,
+                        reinterpret_cast<const unsigned char *>(TLS_CLIENT_PKEY),
+                        strlen(TLS_CLIENT_PKEY) + 1);
+    if (ret != 0) {
+        mbedtls_printf("mbedtls_x509_crt_parse() returned -0x%04X\n", -ret);
+        return ret;
+    }
+
     ret = mbedtls_ssl_conf_own_cert( 
        &ssl_conf,      //SSL conf
        &clicert,   //own public cert chain

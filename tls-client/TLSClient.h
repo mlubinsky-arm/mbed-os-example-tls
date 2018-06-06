@@ -155,6 +155,8 @@ private:
      * Chain of trusted CAs in PEM format
      */
     static const char *TLS_PEM_CA;
+    static const char *TLS_CLIENT_CERT;
+    static const char *TLS_CLIENT_PKEY;
 
     /**
      * Path to the file that will be requested from the server
