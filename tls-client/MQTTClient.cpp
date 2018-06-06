@@ -1,25 +1,8 @@
 /*
- *  Hello world example of a TLS client: fetch an HTTPS page
- *
- *  Copyright (C) 2006-2018, Arm Limited, All Rights Reserved
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
+ *  Example of a MQTT TLS client with 2-way auth 
  */
 
-#include "HelloHttpsClient.h"
+#include "MQTTClient.h"
 
 #include "easy-connect.h"
 
@@ -34,12 +17,12 @@
 #include <stdint.h>
 #include <string.h>
 
-const char *HelloHttpsClient::DRBG_PERSONALIZED_STR =
+const char *MQTTClient::DRBG_PERSONALIZED_STR =
                                                 "Mbed TLS helloword client";
 
-const size_t HelloHttpsClient::ERROR_LOG_BUFFER_LENGTH = 128;
+const size_t MQTTClient::ERROR_LOG_BUFFER_LENGTH = 128;
 
-const char *HelloHttpsClient::TLS_PEM_CA =
+const char *MQTTClient::TLS_PEM_CA =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIDdTCCAl2gAwIBAgILBAAAAAABFUtaw5QwDQYJKoZIhvcNAQEFBQAwVzELMAkG\n"
     "A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv\n"
@@ -62,14 +45,14 @@ const char *HelloHttpsClient::TLS_PEM_CA =
     "HMUfpIBvFSDJ3gyICh3WZlXi/EjJKSZp4A==\n"
     "-----END CERTIFICATE-----\n";
 
-const char *HelloHttpsClient::HTTP_REQUEST_FILE_PATH =
+const char *MQTTClient::HTTP_REQUEST_FILE_PATH =
                                     "/media/uploads/mbed_official/hello.txt";
 
-const char *HelloHttpsClient::HTTP_HELLO_STR = "Hello world!";
+const char *MQTTClient::HTTP_HELLO_STR = "Hello world!";
 
-const char *HelloHttpsClient::HTTP_OK_STR = "200 OK";
+const char *MQTTClient::HTTP_OK_STR = "200 OK";
 
-HelloHttpsClient::HelloHttpsClient(const char *in_server_name,
+MQTTClient::MQTTClient(const char *in_server_name,
                                    const uint16_t in_server_port,
                                    mbedtls_platform_context* in_platform_ctx) :
     socket(),
@@ -87,7 +70,7 @@ HelloHttpsClient::HelloHttpsClient(const char *in_server_name,
     mbedtls_ssl_config_init(&ssl_conf);
 }
 
-HelloHttpsClient::~HelloHttpsClient()
+MQTTClient::~MQTTClient()
 {
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
@@ -98,7 +81,7 @@ HelloHttpsClient::~HelloHttpsClient()
     socket.close();
 }
 
-int HelloHttpsClient::run()
+int MQTTClient::run()
 {
     int ret;
     size_t req_len, req_offset, resp_offset;
@@ -226,7 +209,7 @@ int HelloHttpsClient::run()
     return 0;
 }
 
-int HelloHttpsClient::configureTCPSocket()
+int MQTTClient::configureTCPSocket()
 {
     int ret;
 
@@ -234,11 +217,11 @@ int HelloHttpsClient::configureTCPSocket()
      * Use easy-connect lib to support multiple network bearers. See
      * https://github.com/ARMmbed/easy-connect README.md for more information.
      */
-#if HELLO_HTTPS_CLIENT_DEBUG_LEVEL > 0
+#if DEBUG_LEVEL > 0
     NetworkInterface *network = easy_connect(true);
 #else
     NetworkInterface *network = easy_connect(false);
-#endif /* HELLO_HTTPS_CLIENT_DEBUG_LEVEL > 0 */
+#endif /* DEBUG_LEVEL > 0 */
     if(network == NULL) {
         mbedtls_printf("easy_connect() returned NULL\n"
                        "Failed to connect to the network\n");
@@ -255,7 +238,7 @@ int HelloHttpsClient::configureTCPSocket()
     return 0;
 }
 
-int HelloHttpsClient::configureTlsContexts()
+int MQTTClient::configureTlsContexts()
 {
     int ret;
 
@@ -293,11 +276,11 @@ int HelloHttpsClient::configureTlsContexts()
      */
     mbedtls_ssl_conf_authmode(&ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 
-#if HELLO_HTTPS_CLIENT_DEBUG_LEVEL > 0
+#if DEBUG_LEVEL > 0
     mbedtls_ssl_conf_verify(&ssl_conf, sslVerify, this);
     mbedtls_ssl_conf_dbg(&ssl_conf, sslDebug, NULL);
-    mbedtls_debug_set_threshold(HELLO_HTTPS_CLIENT_DEBUG_LEVEL);
-#endif /* HELLO_HTTPS_CLIENT_DEBUG_LEVEL > 0 */
+    mbedtls_debug_set_threshold(DEBUG_LEVEL);
+#endif /* DEBUG_LEVEL > 0 */
 
     if ((ret = mbedtls_ssl_setup( &ssl, &ssl_conf)) != 0) {
         mbedtls_printf("mbedtls_ssl_setup() returned -0x%04X\n", -ret);
@@ -316,7 +299,7 @@ int HelloHttpsClient::configureTlsContexts()
     return 0;
 }
 
-int HelloHttpsClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
+int MQTTClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
     int ret = socket->recv(buf, len);
@@ -329,7 +312,7 @@ int HelloHttpsClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
     return ret;
 }
 
-int HelloHttpsClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
+int MQTTClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
     int ret = socket->send(buf, len);
@@ -342,7 +325,7 @@ int HelloHttpsClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
     return ret;
 }
 
-void HelloHttpsClient::sslDebug(void *ctx, int level, const char *file,
+void MQTTClient::sslDebug(void *ctx, int level, const char *file,
                                 int line, const char *str)
 {
     (void)ctx;
@@ -358,10 +341,10 @@ void HelloHttpsClient::sslDebug(void *ctx, int level, const char *file,
     mbedtls_printf("%s:%d: |%d| %s\r", basename, line, level, str);
 }
 
-int HelloHttpsClient::sslVerify(void *ctx, mbedtls_x509_crt *crt, int depth,
+int MQTTClient::sslVerify(void *ctx, mbedtls_x509_crt *crt, int depth,
                                 uint32_t *flags)
 {
-    HelloHttpsClient *client = static_cast<HelloHttpsClient *>(ctx);
+    MQTTClient *client = static_cast<MQTTClient *>(ctx);
 
     int ret = -1;
 

@@ -1,12 +1,12 @@
-# HTTPS File Download Example for TLS Client on Mbed OS
+# MQTT Example for TLS Client on Mbed OS
 
-This application downloads a file from an HTTPS server (os.mbed.com) and looks for a specific string in that file.
+This application uses 2-way auth for MQTT client
+It is forked from (https://os.mbed.com/teams/mbed-os-examples/code/mbed-os-example-tls-tls-client).
 
 ## Getting started
 
 Set up your environment if you have not done so already. For instructions, refer to the [main readme](../README.md).
 
-You can also compile this example with the [Mbed Online Compiler](https://os.mbed.com/compiler/) by using [this project](https://os.mbed.com/teams/mbed-os-examples/code/mbed-os-example-tls-tls-client).
 
 ## Requirements
 
@@ -85,7 +85,7 @@ The TLS connection can fail with an error similar to:
     mbedtls_ssl_write() failed: -0x2700 (-9984): X509 - Certificate verification failed, e.g. CRL, CA or signature check failed
     Failed to fetch /media/uploads/mbed_official/hello.txt from os.mbed.com:443
 
-This probably means you need to update the contents of the `SSL_CA_PEM` constant (this can happen if you modify `HTTPS_SERVER_NAME`, or when `os.mbed.com` switches to a new CA when updating its certificate).
+This probably means you need to update the contents of the `SSL_CA_PEM` constant (this can happen if you modify `SERVER_NAME`, or when MQTT broker switches to a new CA when updating its certificate).
 
 Another possible reason for this error is a proxy providing a different certificate. Proxies can be used in some network configurations or for performing man-in-the-middle attacks. If you choose to ignore this error and proceed with the connection anyway, you can change the definition of `UNSAFE` near the top of the file from 0 to 1.
 

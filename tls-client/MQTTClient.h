@@ -1,26 +1,10 @@
 /*
- *  Hello world example of a TLS client: fetch an HTTPS page
+ *   Example of a MQTT TLS client with 2-way auth  
  *
- *  Copyright (C) 2006-2018, Arm Limited, All Rights Reserved
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
  */
 
-#ifndef _HELLOHTTPSCLIENT_H_
-#define _HELLOHTTPSCLIENT_H_
+#ifndef _MQTTCLIENT_H_
+#define _MQTTCLIENT_H_
 
 #include "TCPSocket.h"
 
@@ -37,7 +21,7 @@
 /**
  * Change to a number between 1 and 4 to debug the TLS connection
  */
-#define HELLO_HTTPS_CLIENT_DEBUG_LEVEL  0
+#define DEBUG_LEVEL  0
 
 /**
  * Length (in bytes) for generic buffers used to hold debug or HTTP
@@ -49,25 +33,25 @@
  * This class implements the logic for fetching a file from a webserver using
  * a TCP socket and parsing the result.
  */
-class HelloHttpsClient
+class MQTTClient
 {
 public:
     /**
-     * Construct an HelloHttpsClient instance
+     * Construct an MQTTClient instance
      *
      * \param[in]   in_server_name
      *              The server domain/IP address
      * \param[in]   in_server_port
      *              The server port
      */
-    HelloHttpsClient(const char *in_server_name,
+    MQTTClient(const char *in_server_name,
                      const uint16_t in_server_port,
                      mbedtls_platform_context* in_platform_ctx);
 
     /**
      * Free any allocated resources
      */
-    ~HelloHttpsClient();
+    ~MQTTClient();
 
     /**
      * Start the connection to the server and request to read the file at
@@ -229,4 +213,4 @@ private:
     mbedtls_platform_context* platform_ctx;
 };
 
-#endif /* _HELLOHTTPSCLIENT_H_ */
+#endif /* _MQTTCLIENT_H_ */
