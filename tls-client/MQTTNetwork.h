@@ -10,9 +10,9 @@ public:
     }
 
     ~MQTTNetwork() {
-        //delete socket; // TODO there is the call socket.close() in TLSClient destr 
+        //delete socket;  
     }
-
+    
     int read(unsigned char* buffer, int len, int timeout) {
         return socket->recv(buffer, len);
     }
@@ -27,7 +27,8 @@ public:
     }
 
     int disconnect() {
-        return socket->close();
+        //return socket->close();  // not required because there is call socket.close() in TLSClient destructor
+        return 0;  
     }
 
 private:
