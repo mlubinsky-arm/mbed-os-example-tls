@@ -54,13 +54,11 @@ public:
     ~TLSClient();
 
     /**
-     * Start the connection to the server and request to read the file at
-     * HTTP_REQUEST_FILE_PATH
-     *
+     * Start the connection to the server and call piblishMQTT()
      * \return  0 if successful
      */
     int run();
-    NetworkInterface* network;
+    NetworkInterface* network;  
 
 private:
     /**
@@ -88,7 +86,7 @@ private:
      * \return  If successful, the number of bytes received, a negative value
      *          otherwise.
      */
-    static int sslRecv(void *ctx, unsigned char *buf, size_t len);
+    //static int sslRecv(void *ctx, unsigned char *buf, size_t len);  not in use because we only publishing
 
     /**
      * Wrapper function around TCPSocket that gets called by Mbed TLS whenever
@@ -105,6 +103,10 @@ private:
      *          otherwise
      */
     static int sslSend(void *ctx, const unsigned char *buf, size_t len);
+
+    
+    void publishMQTT();
+
 
     /**
      * Callback to handle debug prints to serial
@@ -205,7 +207,12 @@ private:
     /**
      * The parsed chain of trusted CAs
      */
-    mbedtls_x509_crt cacert;
+    mbedtls_x509_crt   cacert;
+    //https://tls.mbed.org/api/ssl_8h.html#a4e54e9ace21beb608bae36ddb81a4fb0
+    mbedtls_x509_crt   clicert;
+    mbedtls_pk_context pkey;
+
+
     /**
      * THe TLS context
      */

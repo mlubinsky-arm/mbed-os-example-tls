@@ -5,12 +5,12 @@
 
 class MQTTNetwork {
 public:
-    MQTTNetwork(NetworkInterface* aNetwork) : network(aNetwork) {
-        socket = new TCPSocket();
+    MQTTNetwork(NetworkInterface* aNetwork, TCPSocket* aSocket) : network(aNetwork) , socket(aSocket) {
+        //socket = new TCPSocket();
     }
 
     ~MQTTNetwork() {
-        delete socket;
+        //delete socket; // TODO there is the call socket.close() in TLSClient destr 
     }
 
     int read(unsigned char* buffer, int len, int timeout) {

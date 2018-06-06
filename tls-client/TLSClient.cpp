@@ -1,5 +1,6 @@
 /*
  *  Example of a MQTT  client with 2-way TLS auth 
+ *  Forked from https://github.com/ARMmbed/mbed-os-example-tls/blob/master/tls-client/HelloHttpsClient.cpp
  */
 
 #include "TLSClient.h"
@@ -19,9 +20,19 @@
 #include <stdint.h>
 #include <string.h>
 
-const char *TLSClient::DRBG_PERSONALIZED_STR =
-                                                "Mbed TLS  client";
 
+#include "MQTTNetwork.h"
+#include "MQTTmbed.h"
+#include "MQTTClient.h"
+
+Serial pc(USBTX, USBRX);
+#define PRINT pc.printf   //to see output in serial port
+
+
+//const char SERVER_NAME[] = "c02wg14lhtdd.sjc.arm.com";    //this is my MacBook with Mosquitto broker
+//const int SERVER_PORT = 8883;  //1833 without TLS
+
+const char *TLSClient::DRBG_PERSONALIZED_STR = "Mbed TLS  client";
 const size_t TLSClient::ERROR_LOG_BUFFER_LENGTH = 128;
 
 const char *TLSClient::TLS_PEM_CA =
@@ -75,14 +86,88 @@ TLSClient::~TLSClient()
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_x509_crt_free(&cacert);
+    mbedtls_x509_crt_free(&clicert);
     mbedtls_ssl_free(&ssl);
+    mbedtls_pk_free(&pkey);
     mbedtls_ssl_config_free(&ssl_conf);
+
 
     socket.close();
 }
 
+
+void TLSClient::publishMQTT(){
+    MQTTNetwork mqttNetwork(network, &socket);
+    MQTT::Client<MQTTNetwork, Countdown> mqtt_client(mqttNetwork);
+
+    int rc_mqtt_network_connect = mqttNetwork.connect(server_name, server_port);
+    if (rc_mqtt_network_connect != 0) {
+        PRINT("MQTT ERROR rc from TCP connect is %d\r\n", rc_mqtt_network_connect);
+    }
+
+    MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+    data.MQTTVersion = 3;
+    
+    data.clientID.cstring = (char*)"mbed-sample";
+    data.username.cstring = (char*)"testuser";
+    data.password.cstring = (char*)"testpassword";
+    int arrivedcount=0;
+
+    int rc_mqtt_connect =  mqtt_client.connect(data);
+    if (rc_mqtt_connect  != 0) {
+        PRINT("ERROR --- rc from MQTT connect is %d\r\n", rc_mqtt_connect);
+    }
+
+    //int rc_mqtt_subscribe;
+    //if ((rc_mqtt_subscribe = client.subscribe(topic, MQTT::QOS2, messageArrived)) != 0)
+    //    PRINT("ERROR --- rc from MQTT subscribe is %d\r\n", rc_mqtt_subscribe);
+
+    MQTT::Message message;
+    int rc_pub;  
+    char buf[100];
+        
+    const char* ip =  (network) ? network->get_ip_address()  : "IP address error";
+    const char* mac = (network) ? network->get_mac_address() : "Mac address error";
+    const char* topic = "mbed-sample";
+    int i=0; 
+    int N_MESSAGES=16;   
+
+    while(i < N_MESSAGES){  
+    
+        i=i+1;
+        //led1 = !led1;
+        //wait(1.0);
+        PRINT("Before publishing QoC_0 message # %d : rc_mqtt_network_connect=%d rc_mqtt_connect=%d   IP=%s MAC=%s \r\n", i, rc_mqtt_network_connect, rc_mqtt_connect,  ip, mac );
+         
+        // QoS 0
+        
+        sprintf(buf, "Hello World!  QoS 0 message number=%d \r\n", i);
+        message.qos = MQTT::QOS0;
+        message.retained = false;
+        message.dup = false;
+        message.payload = (void*)buf;
+        message.payloadlen = strlen(buf)+1;
+        rc_pub = mqtt_client.publish(topic, message);
+        PRINT("After publishing QoC_0 message # %d rc_pub=%d   arrivedcount=%d  \r\n  \r\n", i, rc_pub, arrivedcount);
+      
+        //while (arrivedcount < 1)
+        //    client.yield(100);
+          
+     } //end while (i <  N_MESSAGE)
+
+    int rc;
+    if ((rc = mqtt_client.unsubscribe(topic)) != 0)
+        PRINT("rc from unsubscribe = %d\r\n", rc);
+
+    if ((rc = mqtt_client.disconnect()) != 0)
+        PRINT("rc from disconnect was %d\r\n", rc);
+
+    mqttNetwork.disconnect();
+}
+
 int TLSClient::run()
 {
+    pc.baud(115200);   //to see output in serial port
     int ret;
     uint32_t flags;
     
@@ -143,6 +228,8 @@ int TLSClient::run()
     }
 
     mbedtls_printf("Established TLS connection to %s\n", server_name);
+    
+    publishMQTT();
 
     return 0;
 }
@@ -266,13 +353,14 @@ int TLSClient::configureTlsContexts()
                        -ret);
         return ret;
     }
-
-    mbedtls_ssl_set_bio(&ssl, static_cast<void *>(&socket), sslSend, sslRecv,
-                        NULL);
+// TODO - investigate if mbedtls_ssl_set_bio call is required
+// https://tls.mbed.org/api/ssl_8h.html#a8b7442420aef7f1a76fa8c5336362f9e
+// mbedtls_ssl_set_bio(&ssl, static_cast<void *>(&socket), sslSend, sslRecv, NULL);
 
     return 0;
 }
 
+/* Not in use because we just publishing
 int TLSClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
@@ -284,8 +372,9 @@ int TLSClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
         mbedtls_printf("socket.recv() returned %d\n", ret);
 
     return ret;
-}
+}*/
 
+// This method needs to be modified to send MQTT messages
 int TLSClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
@@ -298,7 +387,7 @@ int TLSClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
 
     return ret;
 }
-
+/*
 void TLSClient::sslDebug(void *ctx, int level, const char *file,
                                 int line, const char *str)
 {
@@ -306,7 +395,7 @@ void TLSClient::sslDebug(void *ctx, int level, const char *file,
 
     const char *p, *basename;
 
-    /* Extract basename from file */
+     
     for (p = basename = file; *p != '\0'; p++) {
         if (*p == '/' || *p == '\\')
             basename = p + 1;
@@ -314,7 +403,7 @@ void TLSClient::sslDebug(void *ctx, int level, const char *file,
 
     mbedtls_printf("%s:%d: |%d| %s\r", basename, line, level, str);
 }
-
+*/
 int TLSClient::sslVerify(void *ctx, mbedtls_x509_crt *crt, int depth,
                                 uint32_t *flags)
 {
