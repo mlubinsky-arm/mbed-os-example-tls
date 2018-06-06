@@ -2,28 +2,32 @@
 #define _MQTTNETWORK_H_
 
 #include "NetworkInterface.h"
+#include "TLSClient.h"
 
 class MQTTNetwork {
 public:
-    MQTTNetwork(NetworkInterface* aNetwork, TCPSocket* aSocket) : network(aNetwork) , socket(aSocket) {
+    MQTTNetwork(TLSClient* aTlc, NetworkInterface* aNetwork, TCPSocket* aSocket) : tlc(aTlc), network(aNetwork) , socket(aSocket) {
         //socket = new TCPSocket();
     }
 
     ~MQTTNetwork() {
         //delete socket;  
     }
-    
+
     int read(unsigned char* buffer, int len, int timeout) {
-        return socket->recv(buffer, len);
+        return tlc->sslRecvPub(buffer, len);
+        // return socket->recv(buffer, len);
     }
 
     int write(unsigned char* buffer, int len, int timeout) {
-        return socket->send(buffer, len);
+        return tlc->sslSendPub(buffer, len);
+        // return socket->send(buffer, len);
     }
 
     int connect(const char* hostname, int port) {
-        socket->open(network);
-        return socket->connect(hostname, port);
+        // socket->open(network);
+        // return socket->connect(hostname, port);
+        return 0;
     }
 
     int disconnect() {
@@ -32,6 +36,7 @@ public:
     }
 
 private:
+    TLSClient* tlc;
     NetworkInterface* network;
     TCPSocket* socket;
 };

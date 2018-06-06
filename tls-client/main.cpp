@@ -15,8 +15,15 @@
 
 #include "TLSClient.h"
 
- 
-const char SERVER_NAME[] = "c02wg14lhtdd.sjc.arm.com";    //this is my MacBook with Mosquitto broker
+#include "HelloHttpsClient.h"
+
+/* Domain/IP address of the server to contact */
+const char H_SERVER_NAME[] = "os.mbed.com";
+
+/* Port used to connect to the server */
+const int H_SERVER_PORT = 443;
+
+const char SERVER_NAME[] = "10.72.153.40";    //this is my MacBook with Mosquitto broker
 
  
 const int SERVER_PORT = 8883;  //1833 without TLS
@@ -46,6 +53,8 @@ int main()
      */
 
     TLSClient *client;
+    HelloHttpsClient *hclient;
+
 
     mbedtls_printf("Starting mbed-os-example-tls/tls-client\n");
 
@@ -56,6 +65,9 @@ int main()
     printf("Using Mbed OS from master.\n");
 #endif /* MBEDTLS_MAJOR_VERSION */
 
+    //hclient = new (std::nothrow) HelloHttpsClient(H_SERVER_NAME, H_SERVER_PORT,
+    //                                             &platform_ctx);
+
     /* Allocate a TLS client */
     client = new (std::nothrow) TLSClient(SERVER_NAME, SERVER_PORT,
                                                  &platform_ctx);
@@ -65,6 +77,16 @@ int main()
         mbedtls_platform_teardown(&platform_ctx);
         return exit_code;
     }
+
+    /* Run the HelloHTTPsclient */
+    /*
+    if (hclient->run() != 0) {
+        mbedtls_printf("\nFAIL in HTTPSclient->run()\n");
+    } else {
+        exit_code = MBEDTLS_EXIT_SUCCESS;
+        mbedtls_printf("\nSUCCESS with HTTPSclient->run()\n");
+    }
+    */
 
     /* Run the TLSclient */
     if (client->run() != 0) {

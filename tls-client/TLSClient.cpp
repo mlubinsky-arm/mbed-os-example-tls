@@ -28,6 +28,7 @@
 Serial pc(USBTX, USBRX);
 #define PRINT pc.printf   //to see output in serial port
 
+#define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA256
 
 //const char SERVER_NAME[] = "c02wg14lhtdd.sjc.arm.com";    //this is my MacBook with Mosquitto broker
 //const int SERVER_PORT = 8883;  //1833 without TLS
@@ -114,7 +115,7 @@ const char *TLSClient::TLS_CLIENT_PKEY =
    "Gga7O0GMFFz3gXS0Iy68iLQQkzpYPAOOtzxHXOOKziqzxIzNx6ti5vVnKm6X/ioK\n"
    "Ecs4dbwKzKhPmo60sEXbMB1mKIUE/uUS5Mo/3P3GKbUjfM99XRdf\n"
    "-----END RSA PRIVATE KEY-----\n";
-   
+
 TLSClient::TLSClient(const char *in_server_name,
                                    const uint16_t in_server_port,
                                    mbedtls_platform_context* in_platform_ctx) :
@@ -129,8 +130,8 @@ TLSClient::TLSClient(const char *in_server_name,
     mbedtls_entropy_init(&entropy);
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_x509_crt_init(&cacert);
-    mbedtls_x509_crt_init(&clicert);    //  TODO compilation error here  client cert
-    mbedtls_pk_init( &pkey );           //  TODO compilation error here private key 
+    mbedtls_x509_crt_init(&clicert); 
+    mbedtls_pk_init( &pkey ); 
     mbedtls_ssl_init(&ssl);
     mbedtls_ssl_config_init(&ssl_conf);
 }
@@ -151,7 +152,7 @@ TLSClient::~TLSClient()
 
 
 void TLSClient::publishMQTT(){
-    MQTTNetwork mqttNetwork(network, &socket);
+    MQTTNetwork mqttNetwork(this, network, &socket);
     MQTT::Client<MQTTNetwork, Countdown> mqtt_client(mqttNetwork);
 
     int rc_mqtt_network_connect = mqttNetwork.connect(server_name, server_port);
@@ -159,18 +160,22 @@ void TLSClient::publishMQTT(){
         PRINT("MQTT ERROR rc from TCP connect is %d\r\n", rc_mqtt_network_connect);
     }
 
+    PRINT("Connected to Network");
+
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
     data.MQTTVersion = 3;
     
     data.clientID.cstring = (char*)"mbed-sample";
-    data.username.cstring = (char*)"testuser";
-    data.password.cstring = (char*)"testpassword";
+    //data.username.cstring = (char*)"testuser";
+    //data.password.cstring = (char*)"testpassword";
     int arrivedcount=0;
 
     int rc_mqtt_connect =  mqtt_client.connect(data);
     if (rc_mqtt_connect  != 0) {
         PRINT("ERROR --- rc from MQTT connect is %d\r\n", rc_mqtt_connect);
     }
+    PRINT("Connected to MQTT");
+
 
     //int rc_mqtt_subscribe;
     //if ((rc_mqtt_subscribe = client.subscribe(topic, MQTT::QOS2, messageArrived)) != 0)
@@ -242,7 +247,6 @@ int TLSClient::run()
                    server_name, server_port);
 
     /* Start the TLS handshake */
-    mbedtls_printf("Starting the TLS handshake...\n");
     do {
         ret = mbedtls_ssl_handshake(&ssl);
     } while(ret != 0 &&
@@ -304,7 +308,7 @@ int TLSClient::configureTCPSocket()
     network = easy_connect(false);
 #endif /* DEBUG_LEVEL > 0 */
     if(network == NULL) {
-        mbedtls_printf("easy_connect() returned NULL\n"
+        mbedtls_printf("TLSClient easy_connect() returned NULL\n"
                        "Failed to connect to the network\n");
         return -1;
     }
@@ -330,6 +334,7 @@ int TLSClient::configureTlsContexts()
         mbedtls_printf("mbedtls_ctr_drbg_seed() returned -0x%04X\n", -ret);
         return ret;
     }
+
     //TODO: another option is to parse the file: mbedtls_x509_crt_parse_file( &clicert, opt.crt_file )
     //example: https://github.com/ARMmbed/mbedtls/blob/development/programs/ssl/ssl_client2.c#L1207
     ret = mbedtls_x509_crt_parse(&cacert,
@@ -340,20 +345,6 @@ int TLSClient::configureTlsContexts()
         return ret;
     }
 
-    ret = mbedtls_ssl_config_defaults(&ssl_conf, MBEDTLS_SSL_IS_CLIENT,
-                                      MBEDTLS_SSL_TRANSPORT_STREAM,
-                                      MBEDTLS_SSL_PRESET_DEFAULT);
-    if (ret != 0) {
-        mbedtls_printf("mbedtls_ssl_config_defaults() returned -0x%04X\n",
-                       -ret);
-        return ret;
-    }
-
-
-    //   2-way auth  https://tls.mbed.org/api/ssl_8h.html#a4e54e9ace21beb608bae36ddb81a4fb0
- 
-    // TODO: initialize clicert and pkey - currently it is an compilation error here
-    
     ret = mbedtls_x509_crt_parse(&clicert,
                         reinterpret_cast<const unsigned char *>(TLS_CLIENT_CERT),
                         strlen(TLS_CLIENT_CERT) + 1);
@@ -370,32 +361,61 @@ int TLSClient::configureTlsContexts()
         return ret;
     }
 
+    ret = mbedtls_ssl_config_defaults(&ssl_conf, MBEDTLS_SSL_IS_CLIENT,
+                                      MBEDTLS_SSL_TRANSPORT_STREAM,
+                                      MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0) {
+        mbedtls_printf("mbedtls_ssl_config_defaults() returned -0x%04X\n",
+                       -ret);
+        return ret;
+    }
+
+    mbedtls_ssl_conf_rng(&ssl_conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+#if DEBUG_LEVEL > 0
+    mbedtls_ssl_conf_verify(&ssl_conf, sslVerify, this);
+    mbedtls_ssl_conf_dbg(&ssl_conf, sslDebug, NULL);
+    mbedtls_debug_set_threshold(DEBUG_LEVEL);
+#endif /* DEBUG_LEVEL > 0 */
+
+    mbedtls_ssl_conf_ca_chain(&ssl_conf, &cacert, NULL);
+    ret = mbedtls_ssl_conf_own_cert( 
+       &ssl_conf,   //SSL conf
+       &clicert,    //own public cert chain
+       &pkey        //own private key
+    );
+    if (ret != 0) {
+        mbedtls_printf("mbedtls_ssl_conf_own_cert() returned -0x%04X\n",
+                       -ret);
+        return ret;
+    }
+
+
+
+    //   2-way auth  https://tls.mbed.org/api/ssl_8h.html#a4e54e9ace21beb608bae36ddb81a4fb0
+ 
+    // TODO: initialize clicert and pkey - currently it is an compilation error here
+    
+/* 
     ret = mbedtls_ssl_conf_own_cert( 
        &ssl_conf,   //SSL conf
        &clicert,    //own public cert chain
        &pkey        //own private key
     );
 
-
     if (ret != 0) {
         mbedtls_printf("mbedtls_ssl_config_defaults() returned -0x%04X\n",
                        -ret);
         return ret;
     }
-    mbedtls_ssl_conf_ca_chain(&ssl_conf, &cacert, NULL);
-    mbedtls_ssl_conf_rng(&ssl_conf, mbedtls_ctr_drbg_random, &ctr_drbg);
-
+    */
+ 
     /*
      * It is possible to disable authentication by passing
      * MBEDTLS_SSL_VERIFY_NONE in the call to mbedtls_ssl_conf_authmode()
      */
     mbedtls_ssl_conf_authmode(&ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 
-#if DEBUG_LEVEL > 0
-    mbedtls_ssl_conf_verify(&ssl_conf, sslVerify, this);
-    mbedtls_ssl_conf_dbg(&ssl_conf, sslDebug, NULL);
-    mbedtls_debug_set_threshold(DEBUG_LEVEL);
-#endif /* DEBUG_LEVEL > 0 */
+
 
     if ((ret = mbedtls_ssl_setup( &ssl, &ssl_conf)) != 0) {
         mbedtls_printf("mbedtls_ssl_setup() returned -0x%04X\n", -ret);
@@ -409,12 +429,17 @@ int TLSClient::configureTlsContexts()
     }
 // TODO - investigate if mbedtls_ssl_set_bio call is required
 // https://tls.mbed.org/api/ssl_8h.html#a8b7442420aef7f1a76fa8c5336362f9e
-// mbedtls_ssl_set_bio(&ssl, static_cast<void *>(&socket), sslSend, sslRecv, NULL);
+    mbedtls_ssl_set_bio(&ssl, static_cast<void *>(&socket), sslSend, sslRecv, NULL);
 
     return 0;
 }
 
-/* Not in use because we just publishing
+int TLSClient::sslRecvPub(unsigned char *buf, size_t len)
+{
+    return sslRecv(&ssl, buf, len);
+}
+
+/* Not in use because we just publishing*/
 int TLSClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
@@ -426,7 +451,12 @@ int TLSClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
         mbedtls_printf("socket.recv() returned %d\n", ret);
 
     return ret;
-}*/
+} 
+
+int TLSClient::sslSendPub(const unsigned char *buf, size_t len)
+{
+    return sslSend(&ssl, buf, len);
+}
 
 // This method needs to be modified to send MQTT messages
 int TLSClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
@@ -441,7 +471,7 @@ int TLSClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
 
     return ret;
 }
-/*
+
 void TLSClient::sslDebug(void *ctx, int level, const char *file,
                                 int line, const char *str)
 {
@@ -457,7 +487,7 @@ void TLSClient::sslDebug(void *ctx, int level, const char *file,
 
     mbedtls_printf("%s:%d: |%d| %s\r", basename, line, level, str);
 }
-*/
+
 int TLSClient::sslVerify(void *ctx, mbedtls_x509_crt *crt, int depth,
                                 uint32_t *flags)
 {

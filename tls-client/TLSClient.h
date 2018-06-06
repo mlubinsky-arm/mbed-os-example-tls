@@ -21,7 +21,7 @@
 /**
  * Change to a number between 1 and 4 to debug the TLS connection
  */
-#define DEBUG_LEVEL  0
+#define DEBUG_LEVEL  3
 
 /**
  * Length (in bytes) for generic buffers used to hold debug or HTTP
@@ -60,6 +60,10 @@ public:
     int run();
     NetworkInterface* network;  
 
+    int sslSendPub(const unsigned char *buf, size_t len);
+    int sslRecvPub(unsigned char *buf, size_t len);
+
+
 private:
     /**
      * Create a TCPSocket object that can be used to communicate with the server
@@ -86,7 +90,7 @@ private:
      * \return  If successful, the number of bytes received, a negative value
      *          otherwise.
      */
-    //static int sslRecv(void *ctx, unsigned char *buf, size_t len);  not in use because we only publishing
+    static int sslRecv(void *ctx, unsigned char *buf, size_t len); 
 
     /**
      * Wrapper function around TCPSocket that gets called by Mbed TLS whenever
