@@ -3,8 +3,8 @@
  *
  */
 
-#ifndef _MQTTCLIENT_H_
-#define _MQTTCLIENT_H_
+#ifndef _TLSClient_H_
+#define _TLSClient_H_
 
 #include "TCPSocket.h"
 
@@ -33,25 +33,25 @@
  * This class implements the logic for fetching a file from a webserver using
  * a TCP socket and parsing the result.
  */
-class MQTTClient
+class TLSClient
 {
 public:
     /**
-     * Construct an MQTTClient instance
+     * Construct an TLSClient instance
      *
      * \param[in]   in_server_name
      *              The server domain/IP address
      * \param[in]   in_server_port
      *              The server port
      */
-    MQTTClient(const char *in_server_name,
+    TLSClient(const char *in_server_name,
                      const uint16_t in_server_port,
                      mbedtls_platform_context* in_platform_ctx);
 
     /**
      * Free any allocated resources
      */
-    ~MQTTClient();
+    ~TLSClient();
 
     /**
      * Start the connection to the server and request to read the file at
@@ -158,22 +158,24 @@ private:
     /**
      * Path to the file that will be requested from the server
      */
-    static const char *HTTP_REQUEST_FILE_PATH;
+    //static const char *HTTP_REQUEST_FILE_PATH;
 
     /**
      * Expected strings in the HTTP response from the server
      */
-    static const char *HTTP_OK_STR;
+    //static const char *HTTP_OK_STR;
 
     /**
      * Expected strings in the HTTP response from the server
      */
-    static const char *HTTP_HELLO_STR;
+    //static const char *HTTP_HELLO_STR;
 
     /**
      * Instance of TCPSocket used to communicate with the server
      */
     TCPSocket socket;
+
+    NetworkInterface* network;
 
     /**
      * The domain/IP address of the server to contact
@@ -213,4 +215,4 @@ private:
     mbedtls_platform_context* platform_ctx;
 };
 
-#endif /* _MQTTCLIENT_H_ */
+#endif /* _TLSClient_H_ */

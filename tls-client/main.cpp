@@ -1,54 +1,37 @@
-/*
- *  Hello world example of a TLS client: fetch an HTTPS page
- *
- *  Copyright (C) 2006-2018, Arm Limited, All Rights Reserved
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  This file is part of Mbed TLS (https://tls.mbed.org)
- */
-
 /**
  * \file main.cpp
  *
- * \brief An example TLS Client application
+ * \brief An example TLS MQTT Client  with 2-way auth
  *
- * This application sends an HTTPS request to os.mbed.com and searches
- * for a string in the result.
  *
- * This example is implemented as a logic class (HelloHttpsClient) wrapping a
+ * This example is implemented as a logic class (MQTTClient) wrapping a
  * TCP socket. The logic class handles all events, leaving the main loop to just
  * check if the process  has finished.
  */
 
 #include "mbed.h"
 
+Serial pc(USBTX, USBRX);
+#define PRINT pc.printf   //to see output in serial port
+
 #include "mbedtls/platform.h"
 
-#include "HelloHttpsClient.h"
+#include "TLSClient.h"
 
-/* Domain/IP address of the server to contact */
-const char SERVER_NAME[] = "os.mbed.com";
+/* Domain/IP address of the MQTT broker  */
+const char SERVER_NAME[] = "c02wg14lhtdd.sjc.arm.com";    //this is my MacBook with Moquitto broker
 
-/* Port used to connect to the server */
-const int SERVER_PORT = 443;
+/* Port used to connect to the MQTT broker */
+const int SERVER_PORT = 8883;  //1833 without TLS
 
 /**
- * The main function driving the HTTPS client.
+ * The main function 
  */
 int main()
 {
+    pc.baud(115200);   //to see output in serial port
+    PRINT("Hello from tls_client_my_copy \r\n");
+
     mbedtls_platform_context platform_ctx;
     int exit_code = MBEDTLS_EXIT_FAILURE;
 
@@ -61,7 +44,7 @@ int main()
      * cause the other party to time out.
      */
 
-    HelloHttpsClient *client;
+    TLSClient *client;
 
     mbedtls_printf("Starting mbed-os-example-tls/tls-client\n");
 
@@ -72,11 +55,11 @@ int main()
     printf("Using Mbed OS from master.\n");
 #endif /* MBEDTLS_MAJOR_VERSION */
 
-    /* Allocate a HTTPS client */
-    client = new (std::nothrow) HelloHttpsClient(SERVER_NAME, SERVER_PORT,
+    /* Allocate a TLS client */
+    client = new (std::nothrow) TLSClient(SERVER_NAME, SERVER_PORT,
                                                  &platform_ctx);
     if (client == NULL) {
-        mbedtls_printf("Failed to allocate HelloHttpsClient object\n"
+        mbedtls_printf("Failed to allocate TLSClient object\n"
                        "\nFAIL\n");
         mbedtls_platform_teardown(&platform_ctx);
         return exit_code;
@@ -84,10 +67,10 @@ int main()
 
     /* Run the client */
     if (client->run() != 0) {
-        mbedtls_printf("\nFAIL\n");
+        mbedtls_printf("\nFAIL in client->run()\n");
     } else {
         exit_code = MBEDTLS_EXIT_SUCCESS;
-        mbedtls_printf("\nDONE\n");
+        mbedtls_printf("\nSUCCESS with client->run()\n");
     }
 
     delete client;

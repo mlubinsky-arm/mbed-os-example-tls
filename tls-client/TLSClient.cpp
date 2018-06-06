@@ -2,9 +2,14 @@
  *  Example of a MQTT TLS client with 2-way auth 
  */
 
-#include "MQTTClient.h"
+#include "TLSClient.h"
 
 #include "easy-connect.h"
+
+#include "MQTTNetwork.h"
+#include "MQTTmbed.h"
+#include "MQTTClient.h"
+
 
 #include "mbedtls/platform.h"
 #include "mbedtls/config.h"
@@ -17,12 +22,12 @@
 #include <stdint.h>
 #include <string.h>
 
-const char *MQTTClient::DRBG_PERSONALIZED_STR =
-                                                "Mbed TLS helloword client";
+const char *TLSClient::DRBG_PERSONALIZED_STR =
+                                                "Mbed TLS  client";
 
-const size_t MQTTClient::ERROR_LOG_BUFFER_LENGTH = 128;
+const size_t TLSClient::ERROR_LOG_BUFFER_LENGTH = 128;
 
-const char *MQTTClient::TLS_PEM_CA =
+const char *TLSClient::TLS_PEM_CA =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIDdTCCAl2gAwIBAgILBAAAAAABFUtaw5QwDQYJKoZIhvcNAQEFBQAwVzELMAkG\n"
     "A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExEDAOBgNVBAsTB1Jv\n"
@@ -45,14 +50,9 @@ const char *MQTTClient::TLS_PEM_CA =
     "HMUfpIBvFSDJ3gyICh3WZlXi/EjJKSZp4A==\n"
     "-----END CERTIFICATE-----\n";
 
-const char *MQTTClient::HTTP_REQUEST_FILE_PATH =
-                                    "/media/uploads/mbed_official/hello.txt";
 
-const char *MQTTClient::HTTP_HELLO_STR = "Hello world!";
 
-const char *MQTTClient::HTTP_OK_STR = "200 OK";
-
-MQTTClient::MQTTClient(const char *in_server_name,
+TLSClient::TLSClient(const char *in_server_name,
                                    const uint16_t in_server_port,
                                    mbedtls_platform_context* in_platform_ctx) :
     socket(),
@@ -70,7 +70,7 @@ MQTTClient::MQTTClient(const char *in_server_name,
     mbedtls_ssl_config_init(&ssl_conf);
 }
 
-MQTTClient::~MQTTClient()
+TLSClient::~TLSClient()
 {
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
@@ -81,13 +81,11 @@ MQTTClient::~MQTTClient()
     socket.close();
 }
 
-int MQTTClient::run()
+int TLSClient::run()
 {
     int ret;
-    size_t req_len, req_offset, resp_offset;
     uint32_t flags;
-    bool resp_200, resp_hello;
-
+    
     /* Configure the TCPSocket */
     if ((ret = configureTCPSocket()) != 0)
         return ret;
@@ -116,35 +114,6 @@ int MQTTClient::run()
         return ret;
     }
     mbedtls_printf("Successfully completed the TLS handshake\n");
-
-    /* Fill the request buffer */
-    ret = snprintf(gp_buf, sizeof(gp_buf),
-                   "GET %s HTTP/1.1\nHost: %s\n\n", HTTP_REQUEST_FILE_PATH,
-                   server_name);
-    req_len = static_cast<size_t>(ret);
-    if (ret < 0 || req_len >= sizeof(gp_buf)) {
-        mbedtls_printf("Failed to compose HTTP request using snprintf: %d\n",
-                       ret);
-        return ret;
-    }
-
-    /* Send the HTTP request to the server over TLS */
-    req_offset = 0;
-    do {
-        ret = mbedtls_ssl_write(&ssl,
-                reinterpret_cast<const unsigned char *>(gp_buf + req_offset),
-                req_len - req_offset);
-        if (ret > 0)
-            req_offset += static_cast<size_t>(ret);
-    }
-    while(req_offset < req_len &&
-          (ret > 0 ||
-          ret == MBEDTLS_ERR_SSL_WANT_WRITE ||
-          ret == MBEDTLS_ERR_SSL_WANT_READ));
-    if (ret < 0) {
-        mbedtls_printf("mbedtls_ssl_write() returned -0x%04X\n", -ret);
-        return ret;
-    }
 
     /* Print information about the TLS connection */
     ret = mbedtls_x509_crt_info(gp_buf, sizeof(gp_buf),
@@ -175,41 +144,10 @@ int MQTTClient::run()
 
     mbedtls_printf("Established TLS connection to %s\n", server_name);
 
-    /* Read response from the server */
-    resp_offset = 0;
-    resp_200 = false;
-    resp_hello = false;
-    do {
-        ret = mbedtls_ssl_read(&ssl,
-                    reinterpret_cast<unsigned char *>(gp_buf  + resp_offset),
-                    sizeof(gp_buf) - resp_offset - 1);
-        if (ret > 0)
-            resp_offset += static_cast<size_t>(ret);
-
-        /* Ensure that the response string is null-terminated */
-        gp_buf[resp_offset] = '\0';
-
-        /* Check  if we received expected string */
-        resp_200 = resp_200 || strstr(gp_buf, HTTP_OK_STR) != NULL;
-        resp_hello = resp_hello || strstr(gp_buf, HTTP_HELLO_STR) != NULL;
-    } while((!resp_200 || !resp_hello) &&
-            (ret > 0 ||
-            ret == MBEDTLS_ERR_SSL_WANT_READ || MBEDTLS_ERR_SSL_WANT_WRITE));
-    if (ret < 0) {
-        mbedtls_printf("mbedtls_ssl_read() returned -0x%04X\n", -ret);
-        return ret;
-    }
-
-    /* Display response information */
-    mbedtls_printf("HTTP: Received %u chars from server\n", resp_offset);
-    mbedtls_printf("HTTP: Received '%s' status ... %s\n", HTTP_OK_STR,
-                   resp_200 ? "OK" : "FAIL");
-    mbedtls_printf("HTTP: Received message:\n%s\n", gp_buf);
-
     return 0;
 }
 
-int MQTTClient::configureTCPSocket()
+int TLSClient::configureTCPSocket()
 {
     int ret;
 
@@ -218,9 +156,11 @@ int MQTTClient::configureTCPSocket()
      * https://github.com/ARMmbed/easy-connect README.md for more information.
      */
 #if DEBUG_LEVEL > 0
-    NetworkInterface *network = easy_connect(true);
+    //NetworkInterface *network = easy_connect(true);
+    network = easy_connect(true);
 #else
-    NetworkInterface *network = easy_connect(false);
+    //NetworkInterface *network = easy_connect(false);
+    network = easy_connect(false);
 #endif /* DEBUG_LEVEL > 0 */
     if(network == NULL) {
         mbedtls_printf("easy_connect() returned NULL\n"
@@ -238,7 +178,7 @@ int MQTTClient::configureTCPSocket()
     return 0;
 }
 
-int MQTTClient::configureTlsContexts()
+int TLSClient::configureTlsContexts()
 {
     int ret;
 
@@ -249,7 +189,8 @@ int MQTTClient::configureTlsContexts()
         mbedtls_printf("mbedtls_ctr_drbg_seed() returned -0x%04X\n", -ret);
         return ret;
     }
-
+    //TODO: another option is to parse the file: mbedtls_x509_crt_parse_file( &clicert, opt.crt_file )
+    //example: https://github.com/ARMmbed/mbedtls/blob/development/programs/ssl/ssl_client2.c#L1207
     ret = mbedtls_x509_crt_parse(&cacert,
                         reinterpret_cast<const unsigned char *>(TLS_PEM_CA),
                         strlen(TLS_PEM_CA) + 1);
@@ -267,6 +208,21 @@ int MQTTClient::configureTlsContexts()
         return ret;
     }
 
+
+
+    //   2-way auth  https://tls.mbed.org/api/ssl_8h.html#a4e54e9ace21beb608bae36ddb81a4fb0
+    //ret = mbedtls_ssl_conf_own_cert( 
+    //       &ssl_conf,      //SSL conf
+    //       &clicert,   //own public cert chain
+    //      &pkey       //own private key
+    //);
+
+    
+    if (ret != 0) {
+        mbedtls_printf("mbedtls_ssl_config_defaults() returned -0x%04X\n",
+                       -ret);
+        return ret;
+    }
     mbedtls_ssl_conf_ca_chain(&ssl_conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&ssl_conf, mbedtls_ctr_drbg_random, &ctr_drbg);
 
@@ -299,7 +255,7 @@ int MQTTClient::configureTlsContexts()
     return 0;
 }
 
-int MQTTClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
+int TLSClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
     int ret = socket->recv(buf, len);
@@ -312,7 +268,7 @@ int MQTTClient::sslRecv(void *ctx, unsigned char *buf, size_t len)
     return ret;
 }
 
-int MQTTClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
+int TLSClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
 {
     TCPSocket *socket = static_cast<TCPSocket *>(ctx);
     int ret = socket->send(buf, len);
@@ -325,7 +281,7 @@ int MQTTClient::sslSend(void *ctx, const unsigned char *buf, size_t len)
     return ret;
 }
 
-void MQTTClient::sslDebug(void *ctx, int level, const char *file,
+void TLSClient::sslDebug(void *ctx, int level, const char *file,
                                 int line, const char *str)
 {
     (void)ctx;
@@ -341,10 +297,10 @@ void MQTTClient::sslDebug(void *ctx, int level, const char *file,
     mbedtls_printf("%s:%d: |%d| %s\r", basename, line, level, str);
 }
 
-int MQTTClient::sslVerify(void *ctx, mbedtls_x509_crt *crt, int depth,
+int TLSClient::sslVerify(void *ctx, mbedtls_x509_crt *crt, int depth,
                                 uint32_t *flags)
 {
-    MQTTClient *client = static_cast<MQTTClient *>(ctx);
+    TLSClient *client = static_cast<TLSClient *>(ctx);
 
     int ret = -1;
 
