@@ -1,14 +1,11 @@
 /*
- *  Example of a MQTT TLS client with 2-way auth 
+ *  Example of a MQTT  client with 2-way TLS auth 
  */
 
 #include "TLSClient.h"
 
 #include "easy-connect.h"
 
-#include "MQTTNetwork.h"
-#include "MQTTmbed.h"
-#include "MQTTClient.h"
 
 
 #include "mbedtls/platform.h"
@@ -66,6 +63,8 @@ TLSClient::TLSClient(const char *in_server_name,
     mbedtls_entropy_init(&entropy);
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_x509_crt_init(&cacert);
+    mbedtls_x509_crt_init(&clicert);    ///  client cert
+    mbedtls_pk_init( &pkey );           //   private key 
     mbedtls_ssl_init(&ssl);
     mbedtls_ssl_config_init(&ssl_conf);
 }
@@ -209,15 +208,17 @@ int TLSClient::configureTlsContexts()
     }
 
 
-
     //   2-way auth  https://tls.mbed.org/api/ssl_8h.html#a4e54e9ace21beb608bae36ddb81a4fb0
-    //ret = mbedtls_ssl_conf_own_cert( 
-    //       &ssl_conf,      //SSL conf
-    //       &clicert,   //own public cert chain
-    //      &pkey       //own private key
-    //);
-
+ 
+    // TODO: initialize clicert and pkey - currently it is an compilation error here
     
+    ret = mbedtls_ssl_conf_own_cert( 
+       &ssl_conf,      //SSL conf
+       &clicert,   //own public cert chain
+       &pkey       //own private key
+    );
+
+
     if (ret != 0) {
         mbedtls_printf("mbedtls_ssl_config_defaults() returned -0x%04X\n",
                        -ret);

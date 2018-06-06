@@ -60,6 +60,7 @@ public:
      * \return  0 if successful
      */
     int run();
+    NetworkInterface* network;
 
 private:
     /**
@@ -174,8 +175,8 @@ private:
      * Instance of TCPSocket used to communicate with the server
      */
     TCPSocket socket;
-
-    NetworkInterface* network;
+    
+    
 
     /**
      * The domain/IP address of the server to contact
