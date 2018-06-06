@@ -221,18 +221,18 @@ int TLSClient::configureTlsContexts()
         return ret;
     }
 
-    ret = mbedtls_x509_crt_parse(&pkey,
+    ret = mbedtls_pk_parse_key(&pkey,
                         reinterpret_cast<const unsigned char *>(TLS_CLIENT_PKEY),
-                        strlen(TLS_CLIENT_PKEY) + 1);
+                        strlen(TLS_CLIENT_PKEY) + 1, NULL, 0);
     if (ret != 0) {
         mbedtls_printf("mbedtls_x509_crt_parse() returned -0x%04X\n", -ret);
         return ret;
     }
 
     ret = mbedtls_ssl_conf_own_cert( 
-       &ssl_conf,      //SSL conf
-       &clicert,   //own public cert chain
-       &pkey       //own private key
+       &ssl_conf,   //SSL conf
+       &clicert,    //own public cert chain
+       &pkey        //own private key
     );
 
 
