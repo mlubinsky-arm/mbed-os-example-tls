@@ -21,7 +21,7 @@
 /**
  * Change to a number between 1 and 4 to debug the TLS connection
  */
-#define DEBUG_LEVEL  3
+#define DEBUG_LEVEL  2
 
 /**
  * Length (in bytes) for generic buffers used to hold debug or HTTP
@@ -62,6 +62,8 @@ public:
 
     int sslSendPub(const unsigned char *buf, size_t len);
     int sslRecvPub(unsigned char *buf, size_t len);
+
+    void print_wip(char *msg);
 
 
 private:
